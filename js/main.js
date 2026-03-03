@@ -342,22 +342,100 @@ function loadEvents() {
         const data = snap.val() || {};
         const grid = document.getElementById('eventsGrid');
         if (grid) {
-            grid.innerHTML = Object.values(data).map(e => `
-                <div class="holo-card group overflow-hidden">
+            const entries = Object.entries(data);
+            // newest first (fallback if date missing)
+            entries.sort((a, b) => new Date(b[1].date || 0) - new Date(a[1].date || 0));
+
+            grid.innerHTML = entries.map(([id, e]) => {
+                const img = e.image || 'https://via.placeholder.com/600x400';
+                return `
+                <button type="button" class="holo-card group overflow-hidden text-left" data-event-id="${id}">
                     <div class="h-48 overflow-hidden">
-                        <img src="${e.image}" class="w-full h-full object-cover transition duration-500 group-hover:scale-110">
+                        <img src="${img}" class="w-full h-full object-cover transition duration-500 group-hover:scale-110" alt="${(e.title || 'Program').replace(/\"/g, '&quot;')}">
                     </div>
                     <div class="p-6">
-                        <span class="bg-purple-900/50 text-purple-300 text-xs px-2 py-1 rounded border border-purple-500/30">${e.category}</span>
-                        <h3 class="text-xl font-bold mt-2 mb-2">${e.title}</h3>
-                        <p class="text-gray-400 text-sm mb-4 line-clamp-2">${e.shortDesc}</p>
+                        <span class="bg-purple-900/50 text-purple-300 text-xs px-2 py-1 rounded border border-purple-500/30">${e.category || 'Program'}</span>
+                        <h3 class="text-xl font-bold mt-2 mb-2">${e.title || 'Untitled Program'}</h3>
+                        <p class="text-gray-400 text-sm mb-4 line-clamp-2">${e.shortDesc || ''}</p>
                         <div class="flex justify-between text-xs text-cyan-400">
-                            <span><i class="far fa-calendar mr-1"></i>${e.date}</span>
-                            <span><i class="fas fa-map-marker-alt mr-1"></i>${e.location}</span>
+                            <span><i class="far fa-calendar mr-1"></i>${e.date || ''}</span>
+                            <span><i class="fas fa-map-marker-alt mr-1"></i>${e.location || ''}</span>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                </button>`;
+            }).join('');
+
+            // Modal only exists on programs.html
+            const modal = document.getElementById('programModal');
+            const backdrop = document.getElementById('programModalBackdrop');
+            const closeBtn = document.getElementById('programModalClose');
+            const titleEl = document.getElementById('programModalTitle');
+            const metaEl = document.getElementById('programModalMeta');
+            const bannerEl = document.getElementById('programModalBanner');
+            const descEl = document.getElementById('programModalDesc');
+            const galleryEl = document.getElementById('programModalGallery');
+            const contribEl = document.getElementById('programModalContrib');
+
+            if (!modal) return;
+
+            const openModal = (evt) => {
+                const img = evt.image || 'https://via.placeholder.com/900x600';
+                const longDesc = evt.longDesc || evt.shortDesc || '';
+                const contrib = Array.isArray(evt.contributors)
+                    ? evt.contributors
+                    : (typeof evt.contributors === 'string' ? evt.contributors.split(',').map(s => s.trim()).filter(Boolean) : []);
+                const gallery = Array.isArray(evt.galleryImages) ? evt.galleryImages : [];
+
+                if (titleEl) titleEl.textContent = evt.title || 'Program';
+                if (metaEl) metaEl.textContent = `${evt.category || 'Program'}${evt.date ? ' • ' + evt.date : ''}${evt.location ? ' • ' + evt.location : ''}`;
+                if (bannerEl) bannerEl.src = img;
+                if (descEl) descEl.textContent = longDesc;
+
+                if (contribEl) {
+                    contribEl.innerHTML = contrib.length
+                        ? contrib.map(c => `<span class="px-3 py-1 rounded-full text-xs border border-white/10 bg-white/5 text-gray-200">${c}</span>`).join('')
+                        : '<span class="text-gray-500 text-sm">No contributors listed.</span>';
+                }
+
+                if (galleryEl) {
+                    const all = (gallery.length ? gallery : [img]).slice(0, 12);
+                    galleryEl.innerHTML = all.map((u) => `
+                        <button type="button" class="rounded-lg overflow-hidden border border-white/10 bg-black/40 hover:border-cyan-500/40 transition" data-gallery-src="${u}">
+                            <img src="${u}" alt="Gallery" class="w-full h-20 object-cover">
+                        </button>
+                    `).join('');
+
+                    galleryEl.querySelectorAll('[data-gallery-src]').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            if (bannerEl) bannerEl.src = btn.getAttribute('data-gallery-src') || img;
+                        });
+                    });
+                }
+
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            };
+
+            const closeModal = () => {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+            };
+
+            closeBtn?.addEventListener('click', closeModal);
+            backdrop?.addEventListener('click', closeModal);
+            document.addEventListener('keydown', (e) => {
+                if (!modal.classList.contains('hidden') && e.key === 'Escape') closeModal();
+            });
+
+            grid.querySelectorAll('[data-event-id]').forEach(card => {
+                card.addEventListener('click', () => {
+                    const id = card.getAttribute('data-event-id');
+                    if (!id) return;
+                    const evt = data[id];
+                    if (!evt) return;
+                    openModal(evt);
+                });
+            });
         }
     });
 }
