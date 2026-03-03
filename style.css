@@ -26,6 +26,10 @@
        overflow-x: hidden;
        cursor: none; /* Custom Cursor Active */
    }
+   
+   body.admin-page { cursor: auto; }
+   body.admin-page * { cursor: auto; }
+   
    /* --- ENHANCED RESPONSIVE BREAKPOINTS --- */
 @media (max-width: 640px) {
     .container {
@@ -265,6 +269,6 @@
  }
    
    /* --- UTILITIES --- */
- .gradient-text { background: linear-gradient(135deg, var(--cyan-glow), var(--purple-glow)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+ .gradient-text { background: linear-gradient(135deg, var(--cyan-glow), var(--purple-glow)); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
  .input-field { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 12px; color: white; border-radius: 8px; outline: none; transition: 0.3s; }
  .input-field:focus { border-color: var(--cyan-glow); box-shadow: 0 0 15px rgba(0,242,254,0.2); }
