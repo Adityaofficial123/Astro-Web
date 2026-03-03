@@ -26,6 +26,45 @@
         </div>
     </section>
 
+    <div id="programModal" class="fixed inset-0 z-[999] hidden">
+        <div id="programModalBackdrop" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div class="relative h-full w-full flex items-center justify-center p-4 sm:p-6">
+            <div class="holo-card w-full max-w-5xl max-h-[85vh] overflow-hidden">
+                <div class="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-white/10">
+                    <div class="min-w-0">
+                        <h2 id="programModalTitle" class="text-xl sm:text-2xl font-heading text-white truncate"></h2>
+                        <p id="programModalMeta" class="text-xs sm:text-sm text-cyan-400 mt-1"></p>
+                    </div>
+                    <button id="programModalClose" class="text-white/70 hover:text-white text-2xl leading-none px-2">&times;</button>
+                </div>
+                <div class="overflow-y-auto max-h-[calc(85vh-64px)] p-5 sm:p-6">
+                    <div class="grid lg:grid-cols-2 gap-6">
+                        <div>
+                            <div class="h-56 sm:h-72 rounded-xl overflow-hidden border border-white/10 bg-black/40">
+                                <img id="programModalBanner" src="" alt="Program image" class="w-full h-full object-cover">
+                            </div>
+
+                            <div class="mt-4">
+                                <h3 class="text-sm font-bold text-white tracking-widest uppercase">Gallery</h3>
+                                <div id="programModalGallery" class="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-3"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-sm font-bold text-white tracking-widest uppercase">About</h3>
+                            <p id="programModalDesc" class="mt-3 text-gray-300 text-sm sm:text-base leading-relaxed"></p>
+
+                            <div class="mt-6">
+                                <h3 class="text-sm font-bold text-white tracking-widest uppercase">Contributors</h3>
+                                <div id="programModalContrib" class="mt-3 flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
