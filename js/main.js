@@ -1,20 +1,24 @@
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     injectComponents();
     initCursor();
     initRobot();
     initFirebase();
 
-    // Page Specific Loaders
     const path = window.location.pathname;
+
     if (path.includes('members')) loadMembers();
     if (path.includes('programs')) loadEvents();
     if (path.includes('gallery')) loadGallery();
-    if (path.includes('index') || path === '/') initThreeJS();
-    else initCanvasStars(); // Lightweight stars for inner pages
+
+    if (path.includes('index') || path === '/') {
+        initThreeJS();
+        initDailyFact();   // ⭐ ADD THIS LINE
+    } else {
+        initCanvasStars();
+    }
 
     if (typeof AOS !== 'undefined') AOS.init({ duration: 800, once: true });
-});
+}); 
 
 // 1. COMPONENT INJECTION (Nav & Footer)
 function injectComponents() {
@@ -242,6 +246,7 @@ function initCursor() {
 // 4. THREE.JS PLANET (Homepage Only)
 function initThreeJS() {
     const container = document.getElementById('bg-canvas');
+    
     if (!container) return;
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -266,6 +271,7 @@ function initThreeJS() {
         renderer.render(scene, camera);
     };
     animate();
+    
 }
 
 // 5. CANVAS STARS (Inner Pages)
@@ -457,3 +463,244 @@ function loadGallery() {
         }
     });
 }
+
+// ============================================================
+// 7. "DO YOU KNOW?" — DAILY SPACE FACT
+//
+// HOW TO INTEGRATE:
+//   1. Paste this entire block at the bottom of main.js
+//      (after the existing loadGallery function).
+//
+//   2. In the DOMContentLoaded listener at the top of main.js,
+//      add this line inside the homepage-specific block:
+//
+//        if (path.includes('index') || path === '/') {
+//            initThreeJS();
+//            initDailyFact();   // <-- ADD THIS LINE
+//        }
+//
+// ============================================================
+
+// ── CONFIG ──────────────────────────────────────────────────
+const DYK_CONFIG = {
+    // Spaceflight News API — free, no key required
+    apiUrl: 'https://api.spaceflightnewsapi.net/v4/articles/?limit=30&has_launch=true',
+
+    // How many facts to cache per session
+    cacheKey: 'dyk_articles_cache',
+    cacheDateKey: 'dyk_cache_date',
+
+    // NASA Astronomy Picture of the Day API (free key)
+    nasaApodUrl: 'https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY',
+};
+
+// ── FALLBACK LOCAL FACTS ─────────────────────────────────────
+// Used when all APIs fail (network issues, CORS, rate limits)
+const DYK_FALLBACK_FACTS = [
+    {
+        title: "Venus Spins the Wrong Way",
+        summary: "Venus rotates in the opposite direction to most planets in our solar system — a phenomenon called retrograde rotation. This means on Venus, the Sun rises in the west and sets in the east. Scientists believe a massive ancient collision may have flipped the planet upside down billions of years ago.",
+        link: null,
+    },
+    {
+        title: "A Teaspoon of Neutron Star Weighs a Billion Tons",
+        summary: "Neutron stars are the collapsed cores of massive stars that exploded as supernovae. Their matter is compressed so tightly that a single teaspoon would weigh roughly 10 million tons — about the combined mass of every human being on Earth, packed into a sugar cube.",
+        link: null,
+    },
+    {
+        title: "More Stars Than Grains of Sand",
+        summary: "The observable universe contains an estimated 2 trillion galaxies, each with billions of stars. The total number of stars is roughly 10 times greater than all grains of sand on every beach and desert on Earth — a number so vast it is essentially incomprehensible.",
+        link: null,
+    },
+    {
+        title: "A Day on Mercury Is Longer Than Its Year",
+        summary: "Mercury completes one orbit around the Sun in just 88 Earth days, but it rotates so slowly on its axis that a single solar day lasts 176 Earth days. This means a year on Mercury is literally shorter than its own day.",
+        link: null,
+    },
+    {
+        title: "The Footprints on the Moon Will Last Millions of Years",
+        summary: "The Moon has no atmosphere, which means there is no wind or weather to erode the surface. The footprints left by Apollo astronauts will remain perfectly preserved for at least 10 million years — unless a meteorite happens to land directly on them.",
+        link: null,
+    },
+    {
+        title: "Light Takes 100,000 Years to Cross the Milky Way",
+        summary: "Our galaxy is approximately 100,000 light-years in diameter. If you could travel at the speed of light — 299,792 km per second — it would still take 100,000 years to travel from one edge of the Milky Way to the other.",
+        link: null,
+    },
+    {
+        title: "There Is a Giant Cloud of Alcohol in Space",
+        summary: "Located 26,000 light-years from Earth in Sagittarius B2, there is a molecular cloud containing roughly 10 billion billion billion litres of ethyl alcohol — enough to fill millions of Earth-sized planets. Astronomers study it to understand how complex molecules form in space.",
+        link: null,
+    },
+    {
+        title: "The Sun Loses 4 Million Tons of Mass Every Second",
+        summary: "Through nuclear fusion, the Sun converts hydrogen into helium and releases an extraordinary amount of energy. In this process, about 4 million metric tons of matter are converted to energy every single second — yet the Sun has enough fuel to continue shining for another 5 billion years.",
+        link: null,
+    },
+    {
+        title: "Olympus Mons Is Three Times the Height of Everest",
+        summary: "The largest volcano in the solar system, Olympus Mons on Mars, stands approximately 22 km (72,000 ft) tall — nearly three times the height of Mount Everest. Its base stretches 600 km across, wide enough to cover the entire state of Arizona.",
+        link: null,
+    },
+    {
+        title: "Saturn Could Float on Water",
+        summary: "Saturn is the least dense planet in our solar system, with an average density of just 0.687 g/cm³. Water has a density of 1.0 g/cm³. If you could find an ocean large enough, Saturn would float on it — making it the only planet that could do so.",
+        link: null,
+    },
+    {
+        title: "Space Is Completely Silent",
+        summary: "Sound needs a medium — like air or water — to travel through. In the vacuum of space, there is no such medium. Explosions, rocket engines, and even supernovae produce absolutely no sound that could be heard. The universe is in permanent, absolute silence.",
+        link: null,
+    },
+    {
+        title: "The James Webb Telescope Sees Back in Time",
+        summary: "Because light takes time to travel, looking deep into space means looking back in time. The James Webb Space Telescope can observe galaxies as they existed over 13 billion years ago — just a few hundred million years after the Big Bang — giving us a direct window into the early universe.",
+        link: null,
+    },
+    {
+        title: "There Are More Possible Chess Games Than Atoms in the Observable Universe",
+        summary: "While not strictly astronomy, the Shannon Number — the estimated number of possible chess games — is 10^120. The number of atoms in the observable universe is only about 10^80. This comparison helps illustrate just how incomprehensibly vast certain numbers in physics and mathematics truly are.",
+        link: null,
+    },
+    {
+        title: "Black Holes Warp Both Space and Time",
+        summary: "Near the event horizon of a black hole, gravity is so intense that time itself slows down relative to a distant observer — a phenomenon predicted by Einstein's general theory of relativity called gravitational time dilation. An astronaut falling into a black hole would appear to freeze at the event horizon as seen from outside.",
+        link: null,
+    },
+    {
+        title: "The Cosmic Microwave Background Is the Oldest Light We Can See",
+        summary: "The universe was opaque for its first 380,000 years. When it finally cooled enough for atoms to form, light was released — and we can still detect that ancient glow today as the Cosmic Microwave Background radiation. It is the oldest electromagnetic radiation in the universe, a faint echo of the Big Bang itself.",
+        link: null,
+    },
+];
+
+// ── STATE ────────────────────────────────────────────────────
+let dykArticles = [];   // pool of facts for the current session
+let dykIndex = 0;       // current position in pool
+
+// ── MAIN INIT ────────────────────────────────────────────────
+async function initDailyFact() {
+    // Only run on the homepage
+    const section = document.getElementById('do-you-know');
+    if (!section) return;
+
+    // Stamp today's date on the card
+    const dateEl = document.getElementById('dyk-date');
+    if (dateEl) {
+        dateEl.textContent = new Date().toLocaleDateString('en-US', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+    }
+
+    // Seed the index from today's date so the "daily" fact is consistent
+    const today = new Date();
+    const dayOfYear = Math.floor(
+        (today - new Date(today.getFullYear(), 0, 0)) / 86400000
+    );
+
+    try {
+        dykArticles = await fetchSpaceflightArticles();
+        if (!dykArticles.length) throw new Error('empty');
+        // Start at the day-based offset so each day opens on a different fact
+        dykIndex = dayOfYear % dykArticles.length;
+        renderFact(dykArticles[dykIndex], 'api');
+    } catch (_) {
+        // Fall back to local facts
+        dykArticles = DYK_FALLBACK_FACTS;
+        dykIndex = dayOfYear % dykArticles.length;
+        renderFact(dykArticles[dykIndex], 'local');
+    }
+}
+
+// ── FETCH FROM SPACEFLIGHT NEWS API ─────────────────────────
+async function fetchSpaceflightArticles() {
+    // Simple session-level cache to avoid hammering the API
+    const cacheRaw = sessionStorage.getItem(DYK_CONFIG.cacheKey);
+    if (cacheRaw) {
+        try { return JSON.parse(cacheRaw); } catch (_) { /* ignore */ }
+    }
+
+    const res = await fetch(DYK_CONFIG.apiUrl, { signal: AbortSignal.timeout(6000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const json = await res.json();
+    const articles = (json.results || [])
+        .filter(a => a.title && a.summary && a.summary.length > 60)
+        .map(a => ({
+            title: a.title,
+            summary: a.summary,
+            link: a.url || null,
+        }));
+
+    if (articles.length) {
+        sessionStorage.setItem(DYK_CONFIG.cacheKey, JSON.stringify(articles));
+    }
+    return articles;
+}
+
+// ── RENDER A FACT ────────────────────────────────────────────
+function renderFact(fact, source) {
+    const loading  = document.getElementById('dyk-loading');
+    const content  = document.getElementById('dyk-content');
+    const title    = document.getElementById('dyk-title');
+    const summary  = document.getElementById('dyk-summary');
+    const link     = document.getElementById('dyk-link');
+    const badge    = document.getElementById('dyk-source-badge');
+    const label    = document.getElementById('dyk-source-label');
+    const refreshBtn = document.getElementById('dyk-refresh');
+
+    if (!loading || !content || !title || !summary) return;
+
+    // Populate
+    title.textContent   = fact.title;
+    summary.textContent = fact.summary;
+
+    // Source badge
+    if (badge && label) {
+        badge.classList.remove('hidden');
+        label.textContent = source === 'api' ? 'Spaceflight News API' : 'AstroSoc Archive';
+    }
+
+    // Read-more link
+    if (link) {
+        if (fact.link) {
+            link.href = fact.link;
+            link.classList.remove('hidden');
+        } else {
+            link.classList.add('hidden');
+        }
+    }
+
+    // Swap loading → content with animation
+    loading.classList.add('hidden');
+    content.classList.remove('hidden');
+    // Re-trigger animation on each cycle
+    content.classList.remove('dyk-fade-in');
+    void content.offsetWidth; // reflow trick
+    content.classList.add('dyk-fade-in');
+
+    // Show the refresh button
+    if (refreshBtn) {
+        refreshBtn.style.opacity = '1';
+    }
+}
+
+// ── CYCLE TO NEXT FACT (bound to "Next Fact" button) ─────────
+function cycleDailyFact() {
+    if (!dykArticles.length) return;
+    dykIndex = (dykIndex + 1) % dykArticles.length;
+
+    // Briefly show loading skeleton for smooth transition
+    const loading = document.getElementById('dyk-loading');
+    const content = document.getElementById('dyk-content');
+    if (loading && content) {
+        content.classList.add('hidden');
+        loading.classList.remove('hidden');
+    }
+
+    setTimeout(() => renderFact(dykArticles[dykIndex],
+        dykArticles === DYK_FALLBACK_FACTS ? 'local' : 'api'), 400);
+}
+
+// ── EXPOSE cycleDailyFact GLOBALLY (used by onclick in HTML) ─
+window.cycleDailyFact = cycleDailyFact;
