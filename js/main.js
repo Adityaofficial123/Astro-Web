@@ -37,7 +37,7 @@
                 <div class="w-10 h-10 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/50">
                     <i class="fas fa-meteor text-white"></i>
                 </div>
-                <span class="text-2xl font-bold tracking-wider text-white font-heading">Astronomy and astrophysics society Gcoea</span>
+                <span class="text-2xl font-bold tracking-wider text-white font-heading">AstroSoc</span>
             </div>
             <div class="hidden md:flex items-center gap-8">
                 ${links.map(l => `<a href="${l.u}" class="nav-link ${activeNormalized.includes(l.u) ? 'active' : ''}">${l.n}</a>`).join('')}
